@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, process::id};
 
 pub trait Position {
     fn position(&self) -> (f32, f32);
@@ -58,7 +58,11 @@ where
     pub fn search_radius(&self, pos: (f32, f32), r: f32) -> Vec<&T> {
         let mut result = Vec::new();
         for k in self.tree.search_radius(pos, r) {
-            result.push(self.nodes.get(&k).unwrap());
+            let position = self.nodes.get(&k).unwrap().position();
+            // Yes I realize that abs() isn't nessassary, but the compiler *should* optimize them out, and it's more clear.
+            if (position.0 - pos.0).abs().powi(2) + (position.1 - pos.1).abs().powi(2) <= r * r {
+                result.push(self.nodes.get(&k).unwrap());
+            }
         }
 
         result
@@ -109,7 +113,10 @@ impl QuadTreeInner {
                 || (self.top_left.0 - self.bot_right.0).abs() <= self.min_size
                 || (self.top_left.1 - self.bot_right.1).abs() <= self.min_size
             {
-                self.nodes.push(handle);
+                // Forces nodes to always be sorted
+                let idx = self.nodes.partition_point(|&x| x < handle);
+                self.nodes.insert(idx, handle);
+
                 return Ok(Vec::new());
             } else {
                 return Ok(self.split());
@@ -192,19 +199,90 @@ impl QuadTreeInner {
     }
 
     fn search_radius(&self, pos: (f32, f32), r: f32) -> Vec<u64> {
-        todo!()
+        match &self.quads {
+            Some(quads) => {
+                let mut nodes = Vec::new();
+                quads.iter().for_each(|quad| {
+                    if quad.contains_circle(pos, r) {
+                        nodes.extend(quad.search_radius(pos, r))
+                    }
+                });
+                nodes
+            }
+            None => self.nodes.clone(),
+        }
     }
 
     fn contains_circle(&self, pos: (f32, f32), r: f32) -> bool {
-        todo!()
+        let mut test = pos;
+
+        if pos.0 < self.top_left.0 {
+            test.0 = self.top_left.0;
+        } else if pos.0 > self.bot_right.0 {
+            test.0 = self.bot_right.0;
+        }
+        if pos.1 < self.top_left.1 {
+            test.1 = self.top_left.1;
+        } else if pos.1 > self.bot_right.1 {
+            test.1 = self.bot_right.1;
+        }
+
+        (test.0 - pos.0).abs().powi(2) + (test.1 - pos.1).abs().powi(2) <= r.powi(2)
     }
 
     fn remove(&mut self, handle: u64, pos: (f32, f32)) -> Option<u64> {
-        todo!()
+        if !self.in_boundary(pos) {
+            return None;
+        }
+
+        if self.quads.is_none() {
+            // The nodes should always be sorted, because the ids
+            match self.nodes.binary_search(&handle) {
+                Ok(n) => return Some(self.nodes.remove(n)),
+                Err(_) => return None,
+            }
+        }
+
+        // quads is now always Some
+        if (self.top_left.0 + self.bot_right.0) / 2.0 >= pos.0 {
+            if (self.top_left.1 + self.bot_right.1) / 2.0 >= pos.1 {
+                // Insert top left
+                self.quads.as_mut().unwrap()[0].remove(handle, pos)
+            } else {
+                // insert bot left
+                self.quads.as_mut().unwrap()[1].remove(handle, pos)
+            }
+        } else if (self.top_left.1 + self.bot_right.1) / 2.0 >= pos.1 {
+            // Insert top right
+            self.quads.as_mut().unwrap()[2].remove(handle, pos)
+        } else {
+            // Insert bot right
+            self.quads.as_mut().unwrap()[3].remove(handle, pos)
+        }
+
+        // TODO: There should be something here about removing a split when the number of child nodes is (zero? since this
+        // is for moving objects, unsplitting when the number of child nodes equals the max nodes for a cell may result in constantly
+        // splitting and unsplitting)
     }
 
     fn lines(&self) -> Vec<((f32, f32), (f32, f32))> {
-        todo!()
+        let mut lines = vec![
+            (self.top_left, (self.top_left.0, self.bot_right.1)),
+            (self.top_left, (self.bot_right.0, self.top_left.1)),
+            (self.bot_right, (self.top_left.0, self.bot_right.1)),
+            (self.bot_right, (self.bot_right.0, self.top_left.1)),
+        ];
+
+        match &self.quads {
+            Some(quads) => {
+                for quad in quads.iter() {
+                    lines.extend(quad.lines());
+                }
+            }
+            None => {}
+        }
+
+        lines
     }
 }
 
