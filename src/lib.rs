@@ -137,7 +137,9 @@ impl QuadTreeInner {
 
                 return Ok(Vec::new());
             } else {
-                return Ok(self.split());
+                let mut splits = self.split();
+                splits.push(handle);
+                return Ok(splits);
             }
         }
 
@@ -145,20 +147,18 @@ impl QuadTreeInner {
         if (self.top_left.0 + self.bot_right.0) / 2.0 >= pos.0 {
             if (self.top_left.1 + self.bot_right.1) / 2.0 >= pos.1 {
                 // Insert top left
-                self.quads.as_mut().unwrap()[0].insert(pos, handle)?;
+                self.quads.as_mut().unwrap()[0].insert(pos, handle)
             } else {
                 // insert bot left
-                self.quads.as_mut().unwrap()[1].insert(pos, handle)?;
+                self.quads.as_mut().unwrap()[1].insert(pos, handle)
             }
         } else if (self.top_left.1 + self.bot_right.1) / 2.0 >= pos.1 {
             // Insert top right
-            self.quads.as_mut().unwrap()[2].insert(pos, handle)?;
+            self.quads.as_mut().unwrap()[2].insert(pos, handle)
         } else {
             // Insert bot right
-            self.quads.as_mut().unwrap()[3].insert(pos, handle)?;
+            self.quads.as_mut().unwrap()[3].insert(pos, handle)
         }
-
-        Ok(Vec::new())
     }
 
     fn in_boundary(&self, pos: (f32, f32)) -> bool {
@@ -326,9 +326,9 @@ mod tests {
 
     #[test]
     fn test_split_quadtree() {
-        let mut qt = QuadTree::<TestStruct>::new(5, 0.01, (0.0, 0.0), (1.0, 1.0));
+        let mut qt = QuadTree::<TestStruct>::new(2, 0.01, (0.0, 0.0), (1.0, 1.0));
 
-        let n = 10_000;
+        let n = 10;
         for i in 0..n {
             let t = TestStruct {
                 pos: (i as f32 / n as f32, i as f32 / n as f32),
@@ -337,6 +337,8 @@ mod tests {
             qt.insert(t, pos)
                 .unwrap_or_else(|_| panic!("Error when inserting item! {:?}", t));
         }
+
+        dbg!(qt);
     }
 
     #[test]
@@ -349,6 +351,19 @@ mod tests {
             let pos = t.position();
             qt.insert(t, pos)
                 .unwrap_or_else(|_| panic!("Error when inserting item! {:?}", t));
+        }
+    }
+
+    #[test]
+    fn pop_add() {
+        // Checking to make sure the split loop works as expected.
+        let mut splits: Vec<u64> = vec![1];
+
+        while let Some(n) = splits.pop() {
+            dbg!(n);
+            if n < 10 {
+                splits.append(&mut vec![n + 1, n + 2]);
+            }
         }
     }
 }
