@@ -214,8 +214,8 @@ impl QuadTreeInner {
 
         self.quads = Some(Box::new([
             top_left_quad,
-            top_right_quad,
             bot_left_quad,
+            top_right_quad,
             bot_right_quad,
         ]));
 
