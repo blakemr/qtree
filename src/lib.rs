@@ -192,10 +192,7 @@ impl QuadTreeInner {
             self.max_nodes,
             self.min_size,
             ((self.top_left.0 + self.bot_right.0) / 2.0, self.top_left.1),
-            (
-                (self.top_left.0 + self.bot_right.0) / 2.0,
-                (self.top_left.1 + self.bot_right.1) / 2.0,
-            ),
+            (self.bot_right.0, (self.top_left.1 + self.bot_right.1) / 2.0),
         );
 
         let bot_left_quad = Self::new(
