@@ -1,4 +1,4 @@
-use std::{collections::HashMap, process::id};
+use std::collections::HashMap;
 
 pub trait Position {
     fn position(&self) -> (f32, f32);
@@ -145,9 +145,9 @@ impl QuadTreeInner {
 
     fn in_boundary(&self, pos: (f32, f32)) -> bool {
         pos.0 >= self.top_left.0
-            && pos.0 < self.bot_right.0
+            && pos.0 <= self.bot_right.0
             && pos.1 >= self.top_left.1
-            && pos.1 < self.bot_right.1
+            && pos.1 <= self.bot_right.1
     }
 
     fn split(&mut self) -> Vec<u64> {
@@ -289,4 +289,48 @@ impl QuadTreeInner {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Debug, Default, Clone, Copy)]
+    struct TestStruct {
+        pos: (f32, f32),
+    }
+
+    impl Position for TestStruct {
+        fn position(&self) -> (f32, f32) {
+            self.pos
+        }
+    }
+
+    #[test]
+    fn test_new_quadtree() {
+        dbg!(QuadTree::<TestStruct>::new(10, 1.0, (0.0, 0.0), (1.0, 1.0)));
+    }
+
+    #[test]
+    fn test_split_quadtree() {
+        let mut qt = QuadTree::<TestStruct>::new(5, 0.01, (0.0, 0.0), (1.0, 1.0));
+
+        let n = 10_000;
+        for i in 0..n {
+            let t = TestStruct {
+                pos: (i as f32 / n as f32, i as f32 / n as f32),
+            };
+            let pos = t.position();
+            qt.insert(t, pos)
+                .unwrap_or_else(|_| panic!("Error when inserting item! {:?}", t));
+        }
+    }
+
+    #[test]
+    fn test_stacked_units() {
+        let mut qt = QuadTree::<TestStruct>::new(5, 0.01, (0.0, 0.0), (1.0, 1.0));
+
+        let n = 10_000;
+        for _ in 0..n {
+            let t = TestStruct { pos: (0.1, 0.1) };
+            let pos = t.position();
+            qt.insert(t, pos)
+                .unwrap_or_else(|_| panic!("Error when inserting item! {:?}", t));
+        }
+    }
 }
