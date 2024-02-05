@@ -60,6 +60,8 @@ where
         for k in self.tree.search_radius(pos, r) {
             let position = self.nodes.get(&k).unwrap().position();
             // Yes I realize that abs() isn't nessassary, but the compiler *should* optimize them out, and it's more clear.
+            // NOTE: You can probably optimize here; if the quad is contained in the radius, you don't need this check.
+            //   Also, a version of this that loosens the radius check a bit by not checking min size areas would be nice.
             if (position.0 - pos.0).abs().powi(2) + (position.1 - pos.1).abs().powi(2) <= r * r {
                 result.push(self.nodes.get(&k).unwrap());
             }
@@ -75,6 +77,22 @@ where
     pub fn remove(&mut self, id: u64, pos: (f32, f32)) -> Option<T> {
         self.tree.remove(id, pos);
         self.nodes.remove(&id)
+    }
+
+    pub fn reinsert(&mut self, id: u64, old_pos: (f32, f32)) -> Result<(), QuadTreeInsertError> {
+        self.tree.remove(id, old_pos);
+
+        let mut splits = self
+            .tree
+            .insert(self.nodes.get(&id).unwrap().position(), id)?;
+        while let Some(id) = splits.pop() {
+            let mut new_splits = self
+                .tree
+                .insert(self.nodes.get(&id).unwrap().position(), id)?;
+            splits.append(&mut new_splits);
+        }
+
+        Ok(())
     }
 }
 
