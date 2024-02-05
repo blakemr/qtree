@@ -1,11 +1,17 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 pub trait Position {
     fn position(&self) -> (f32, f32);
 }
 
 #[derive(Debug)]
-pub struct QuadTreeInsertError;
+pub struct QuadTreeInsertError(String);
+
+impl fmt::Display for QuadTreeInsertError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct QuadTree<T>
@@ -123,7 +129,10 @@ impl QuadTreeInner {
 
     fn insert(&mut self, pos: (f32, f32), handle: u64) -> Result<Vec<u64>, QuadTreeInsertError> {
         if !self.in_boundary(pos) {
-            return Err(QuadTreeInsertError);
+            return Err(QuadTreeInsertError(format!(
+                "{:?} is outside {:?} to {:?}",
+                pos, self.top_left, self.bot_right
+            )));
         }
 
         if self.quads.is_none() {
