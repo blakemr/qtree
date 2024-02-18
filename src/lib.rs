@@ -77,7 +77,15 @@ where
     }
 
     pub fn search_radius_ids(&self, pos: (f32, f32), r: f32) -> Vec<u64> {
-        self.tree.search_radius(pos, r)
+        self.tree
+            .search_radius(pos, r)
+            .iter()
+            .filter(|id| {
+                let position = self.nodes.get(id).unwrap().position();
+                (position.0 - pos.0).abs().powi(2) + (position.1 - pos.1).abs().powi(2) <= r * r
+            })
+            .copied()
+            .collect()
     }
 
     pub fn remove(&mut self, id: u64, pos: (f32, f32)) -> Option<T> {
